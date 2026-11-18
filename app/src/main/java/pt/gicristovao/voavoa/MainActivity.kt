@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var defaultTextColor = Color.DKGRAY
     private var pendingInstall: File? = null
     private var updateChecked = false
+    private var latestRelease: Updater.Release? = null
 
     private val askLocation = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -311,7 +312,14 @@ class MainActivity : AppCompatActivity() {
         if (updateChecked) return
         updateChecked = true
         val r = Updater.latest() ?: return
+        latestRelease = r
         if (r.versionCode <= Updater.currentVersionCode(this)) return
+        showUpdatePrompt(r)
+    }
+
+    private fun isNewer(r: Updater.Release?) = r != null && r.versionCode > Updater.currentVersionCode(this)
+
+    private fun showUpdatePrompt(r: Updater.Release) {
         MaterialAlertDialogBuilder(this)
             .setTitle("Nova versão da app")
             .setMessage(
@@ -402,14 +410,44 @@ class MainActivity : AppCompatActivity() {
             append("Versão dos dados: $issued (${s.source})\n")
             append("A app atualiza sempre que é aberta e a cada 12 horas em segundo plano.\n\n")
             append(DISCLAIMER)
-            append("\n\nVoa Voa $version · Mapa © colaboradores do OpenStreetMap")
+            val appState = when {
+                latestRelease == null -> ""
+                isNewer(latestRelease) -> " (há uma versão nova: ${latestRelease?.versionName})"
+                else -> " (a mais recente)"
+            }
+            append("\n\nVoa Voa $version$appState · Mapa © colaboradores do OpenStreetMap")
         }
+        val newer = latestRelease?.takeIf { isNewer(it) }
         MaterialAlertDialogBuilder(this)
             .setTitle("Voa Voa")
             .setMessage(msg)
             .setPositiveButton("Fechar", null)
-            .setNeutralButton("Atualizar agora") { _, _ -> refresh(force = true) }
+            .setNeutralButton("Atualizar dados") { _, _ -> refresh(force = true) }
+            .setNegativeButton(if (newer != null) "Instalar ${newer.versionName}" else "Procurar atualizações") { _, _ ->
+                if (newer != null) downloadAndInstall(newer) else searchForUpdate()
+            }
             .show()
+    }
+
+    private fun searchForUpdate() {
+        Toast.makeText(this, "A procurar atualizações…", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val r = Updater.latest()
+            when {
+                r == null -> Toast.makeText(
+                    this@MainActivity, "Não foi possível verificar. Tenta mais tarde.", Toast.LENGTH_LONG
+                ).show()
+                isNewer(r) -> { latestRelease = r; showUpdatePrompt(r) }
+                else -> {
+                    latestRelease = r
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Já tens a versão mais recente (${Updater.currentVersionName(this@MainActivity)})",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
     companion object {
