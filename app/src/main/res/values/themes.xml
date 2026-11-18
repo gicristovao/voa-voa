@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Cores do sistema (Material You). As cores fixas só se usam em Android antigos. -->
     <style name="Theme.VoaVoa" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/ladybug_red</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorPrimaryContainer">#FFDAD6</item>
-        <item name="colorSecondary">#37474F</item>
-        <item name="floatingActionButtonStyle">@style/Widget.Material3.FloatingActionButton.Surface</item>
+        <item name="floatingActionButtonStyle">@style/Widget.Material3.FloatingActionButton.Secondary</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>
