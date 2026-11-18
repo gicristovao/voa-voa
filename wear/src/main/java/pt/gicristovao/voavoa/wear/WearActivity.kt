@@ -229,8 +229,8 @@ fun HomeScreen(
                 if (c.upcoming.isNotEmpty()) item {
                     Text("+ ${c.upcoming.size} restrição temporária futura", fontSize = 11.sp, color = Color(0xFFFFE08A), textAlign = TextAlign.Center)
                 }
-                item { WearChip("Ver zonas") { onDetail(here) } }
-                item { WearChip("Ver no mapa") { onMap(here) } }
+                item { WearChip("Ver zonas", { onDetail(here) }) }
+                item { WearChip("Ver no mapa", { onMap(here) }) }
             } else if (state.locating || state.zones.isEmpty()) {
                 item {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
