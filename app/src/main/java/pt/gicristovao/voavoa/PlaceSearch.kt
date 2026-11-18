@@ -6,6 +6,7 @@ import android.location.Geocoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -17,7 +18,8 @@ data class Place(val name: String, val detail: String, val lat: Double, val lon:
 
 /**
  * Pesquisa de locais em Portugal (continente, Açores e Madeira).
- * Enquanto se escreve: Geocoder do Android. Ao carregar em "Pesquisar" sem resultados: OpenStreetMap (Nominatim).
+ * Enquanto se escreve: Photon (OpenStreetMap, feito para pesquisa à medida que se escreve).
+ * Ao carregar em "Pesquisar" sem resultados: Nominatim e, por fim, o Geocoder do Android.
  * O Nominatim não permite pesquisa a cada tecla, por isso só é usado ao submeter.
  */
 object PlaceSearch {
@@ -28,6 +30,53 @@ object PlaceSearch {
     private const val MAX_LAT = 42.2
     private const val MAX_LON = -6.1
     private val pt = Locale("pt", "PT")
+
+    suspend fun photon(query: String, near: LatLon): List<Place> = withContext(Dispatchers.IO) {
+        runCatching {
+            val q = URLEncoder.encode(query, "UTF-8")
+            val url = "https://photon.komoot.io/api/?q=$q&limit=12" +
+                "&lat=${near.lat}&lon=${near.lon}&bbox=$MIN_LON,$MIN_LAT,$MAX_LON,$MAX_LAT"
+            val c = URL(url).openConnection() as HttpURLConnection
+            c.connectTimeout = 8_000
+            c.readTimeout = 10_000
+            c.setRequestProperty("User-Agent", "voa-voa-android (https://github.com/gicristovao/voa-voa)")
+            try {
+                if (c.responseCode != 200) return@withContext emptyList<Place>()
+                val feats = JSONObject(c.inputStream.bufferedReader().use { it.readText() }).getJSONArray("features")
+                val seen = HashSet<String>()
+                (0 until feats.length()).mapNotNull { i ->
+                    val f = feats.getJSONObject(i)
+                    val p = f.getJSONObject("properties")
+                    if (!p.optString("countrycode").equals("PT", true)) return@mapNotNull null
+                    val coords = f.getJSONObject("geometry").getJSONArray("coordinates")
+                    val lon = coords.getDouble(0)
+                    val lat = coords.getDouble(1)
+                    val street = p.str("street")
+                    val name = p.str("name")
+                        ?: street?.let { listOfNotNull(it, p.str("housenumber")).joinToString(" ") }
+                        ?: return@mapNotNull null
+                    val detail = listOfNotNull(p.str("district"), p.str("locality"), p.str("city"), p.str("county"), p.str("state"))
+                        .filter { !it.equals(name, true) }.distinct().take(2).joinToString(", ")
+                    val key = "${name.lowercase()}|${"%.3f".format(Locale.US, lat)}|${"%.3f".format(Locale.US, lon)}"
+                    if (!seen.add(key)) return@mapNotNull null
+                    Place(name, detail, lat, lon, photonKind(p.optString("osm_key"), p.optString("osm_value"), p.optString("type")))
+                }.take(8)
+            } finally {
+                c.disconnect()
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun JSONObject.str(k: String): String? = optString(k, "").trim().ifBlank { null }
+
+    private fun photonKind(key: String, value: String, type: String): PlaceKind = when {
+        key == "place" || type in setOf("city", "locality", "district", "county") -> PlaceKind.LOCALITY
+        key in setOf("leisure", "natural", "landuse", "waterway") || value in setOf("park", "beach", "peak", "nature_reserve") ->
+            PlaceKind.NATURE
+        key == "highway" || (type == "house" && key in setOf("building", "place", "")) || type == "street" -> PlaceKind.ADDRESS
+        key in setOf("amenity", "tourism", "historic", "building", "man_made", "railway", "aeroway", "office", "shop") -> PlaceKind.LANDMARK
+        else -> PlaceKind.OTHER
+    }
 
     suspend fun geocoder(ctx: Context, query: String, near: LatLon): List<Place> = withContext(Dispatchers.IO) {
         if (!Geocoder.isPresent()) return@withContext emptyList<Place>()

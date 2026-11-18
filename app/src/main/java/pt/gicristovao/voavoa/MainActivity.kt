@@ -348,7 +348,7 @@ class MainActivity : AppCompatActivity() {
                 searchJob = lifecycleScope.launch {
                     delay(450)
                     showResultsLoading()
-                    showResults(PlaceSearch.geocoder(this@MainActivity, q, mapCenter()), submitted = false)
+                    showResults(PlaceSearch.photon(q, mapCenter()), submitted = false)
                 }
             }
         })
@@ -367,8 +367,9 @@ class MainActivity : AppCompatActivity() {
         searchJob?.cancel()
         searchJob = lifecycleScope.launch {
             showResultsLoading()
-            var r = PlaceSearch.geocoder(this@MainActivity, q, mapCenter())
+            var r = PlaceSearch.photon(q, mapCenter())
             if (r.isEmpty()) r = PlaceSearch.nominatim(q, mapCenter())
+            if (r.isEmpty()) r = PlaceSearch.geocoder(this@MainActivity, q, mapCenter())
             showResults(r, submitted = true)
         }
     }
