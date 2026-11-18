@@ -333,7 +333,7 @@ class MainActivity : AppCompatActivity() {
         searchInput = findViewById(R.id.searchInput)
         resultsCard = findViewById(R.id.resultsCard)
         resultsList = findViewById(R.id.resultsList)
-        statusCard = findViewById(R.id.statusCard)
+        statusCard = findViewById(R.id.statusRow)
         val clear = findViewById<ImageButton>(R.id.btnClear)
 
         searchInput.addTextChangedListener(object : TextWatcher {
