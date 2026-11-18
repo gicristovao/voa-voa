@@ -7,6 +7,11 @@ App Android para consultar as zonas geográficas de voo de drones (UAS) em Portu
 No telemóvel, abre **[a última versão](https://github.com/gicristovao/voa-voa/releases/latest)** e toca em `voa-voa.apk`.
 Na primeira vez, o Android pede autorização para instalar apps desta origem.
 
+## Relógio (Wear OS)
+
+A versão para relógio (`voa-voa-wear.apk`) mostra o veredicto da tua posição e as zonas, pesquisa locais por voz ou teclado, confirma o local num mapa e tem um tile.
+Instala-se a partir do telemóvel com uma app como a **Wear Installer 2**, usando a "Depuração sem fios" do relógio (Opções de programador). Não se atualiza sozinha: cada versão nova instala-se da mesma forma.
+
 ## O que faz
 
 - Mapa com as zonas: vermelho (proibido), amarelo (autorização ou condições) e cinzento (sem restrição).
