@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.VoaVoa" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ladybug_red</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#FFDAD6</item>
+        <item name="colorSecondary">#37474F</item>
+        <item name="floatingActionButtonStyle">@style/Widget.Material3.FloatingActionButton.Surface</item>
+    </style>
+</resources>

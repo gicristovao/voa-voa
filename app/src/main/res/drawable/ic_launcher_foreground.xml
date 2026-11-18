@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- antenas -->
+    <path android:strokeColor="#212121" android:strokeWidth="2.5" android:strokeLineCap="round"
+        android:pathData="M50,31 L44,23 M58,31 L64,23"/>
+    <!-- cabeça -->
+    <path android:fillColor="#212121" android:pathData="M45,37a9,9 0 1,0 18,0a9,9 0 1,0 -18,0"/>
+    <!-- corpo -->
+    <path android:fillColor="#D32F2F" android:pathData="M32,59a22,22 0 1,0 44,0a22,22 0 1,0 -44,0"/>
+    <!-- risca das asas -->
+    <path android:fillColor="#212121" android:pathData="M52.8,38h2.4v43h-2.4z"/>
+    <!-- pintas -->
+    <path android:fillColor="#212121" android:pathData="M40,52a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"/>
+    <path android:fillColor="#212121" android:pathData="M59,52a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"/>
+    <path android:fillColor="#212121" android:pathData="M39,67a3.8,3.8 0 1,0 7.6,0a3.8,3.8 0 1,0 -7.6,0"/>
+    <path android:fillColor="#212121" android:pathData="M61.4,67a3.8,3.8 0 1,0 7.6,0a3.8,3.8 0 1,0 -7.6,0"/>
+</vector>
