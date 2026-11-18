@@ -5,4 +5,6 @@
     <string name="info">Informação</string>
     <string name="my_location">A minha localização</string>
     <string name="can_i_fly">Posso voar aqui?</string>
+    <string name="search_hint">Pesquisar local ou morada</string>
+    <string name="clear">Limpar</string>
 </resources>

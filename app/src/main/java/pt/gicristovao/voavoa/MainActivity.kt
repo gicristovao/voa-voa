@@ -9,6 +9,20 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.Gravity
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +69,11 @@ class MainActivity : AppCompatActivity() {
     private var updateChecked = false
     private var latestRelease: Updater.Release? = null
     private var infoSheet: InfoSheet? = null
+    private lateinit var searchInput: EditText
+    private lateinit var resultsCard: MaterialCardView
+    private lateinit var resultsList: LinearLayout
+    private lateinit var statusCard: View
+    private var searchJob: Job? = null
 
     private val askLocation = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -82,7 +101,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.btnCheck).setOnClickListener { checkHere() }
         findViewById<FloatingActionButton>(R.id.btnMyLocation).setOnClickListener { centerOnMe() }
-        findViewById<FloatingActionButton>(R.id.btnInfo).setOnClickListener { showInfo() }
+        findViewById<View>(R.id.btnInfo).setOnClickListener { showInfo() }
+        setupSearch()
         statusText.setOnClickListener { refresh(force = true) }
 
         ZoneRepository.scheduleBackground(this)
@@ -305,6 +325,141 @@ class MainActivity : AppCompatActivity() {
         map.invalidate()
 
         ZoneSheet.show(this, p, fromGps, active, upcoming, national)
+    }
+
+    // ---------- Pesquisa de locais ----------
+
+    private fun setupSearch() {
+        searchInput = findViewById(R.id.searchInput)
+        resultsCard = findViewById(R.id.resultsCard)
+        resultsList = findViewById(R.id.resultsList)
+        statusCard = findViewById(R.id.statusCard)
+        val clear = findViewById<ImageButton>(R.id.btnClear)
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val q = s?.toString()?.trim().orEmpty()
+                clear.visibility = if (q.isEmpty()) View.GONE else View.VISIBLE
+                searchJob?.cancel()
+                if (q.length < 2) { hideResults(); return }
+                if (!searchInput.hasFocus()) return
+                searchJob = lifecycleScope.launch {
+                    delay(450)
+                    showResultsLoading()
+                    showResults(PlaceSearch.geocoder(this@MainActivity, q, mapCenter()), submitted = false)
+                }
+            }
+        })
+        searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) { submitSearch(); true } else false
+        }
+        clear.setOnClickListener {
+            searchInput.setText("")
+            searchInput.requestFocus()
+        }
+    }
+
+    private fun submitSearch() {
+        val q = searchInput.text.toString().trim()
+        if (q.length < 2) return
+        searchJob?.cancel()
+        searchJob = lifecycleScope.launch {
+            showResultsLoading()
+            var r = PlaceSearch.geocoder(this@MainActivity, q, mapCenter())
+            if (r.isEmpty()) r = PlaceSearch.nominatim(q, mapCenter())
+            showResults(r, submitted = true)
+        }
+    }
+
+    private fun mapCenter() = map.mapCenter.let { LatLon(it.latitude, it.longitude) }
+
+    private fun showResultsLoading() {
+        resultsList.removeAllViews()
+        resultsList.addView(resultMessage("A pesquisar…"))
+        resultsCard.visibility = View.VISIBLE
+        statusCard.visibility = View.GONE
+    }
+
+    private fun showResults(places: List<Place>, submitted: Boolean) {
+        resultsList.removeAllViews()
+        if (places.isEmpty()) {
+            resultsList.addView(resultMessage(
+                if (submitted) "Sem resultados em Portugal" else "Sem resultados. Carrega em pesquisar no teclado para procurar mais."
+            ))
+        } else {
+            places.take(6).forEachIndexed { i, p -> resultsList.addView(resultRow(p, divider = i > 0)) }
+        }
+        resultsCard.visibility = View.VISIBLE
+        statusCard.visibility = View.GONE
+    }
+
+    private fun hideResults() {
+        resultsList.removeAllViews()
+        resultsCard.visibility = View.GONE
+        statusCard.visibility = View.VISIBLE
+    }
+
+    private fun resultMessage(msg: String) = TextView(this).apply {
+        text = msg
+        textSize = 13f
+        setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant))
+        val p = (14 * resources.displayMetrics.density).toInt()
+        setPadding(p, p, p, p)
+    }
+
+    private fun resultRow(p: Place, divider: Boolean): View {
+        val d = resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
+        val muted = MaterialColors.getColor(statusText, com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            isClickable = true
+            val tv = android.util.TypedValue()
+            theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+            setBackgroundResource(tv.resourceId)
+            setOnClickListener { goToPlace(p) }
+        }
+        row.addView(ImageView(this).apply {
+            setImageResource(PlaceSearch.icon(p.kind))
+            setColorFilter(muted)
+            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(14) }
+        })
+        row.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@MainActivity).apply { text = p.name; textSize = 15f })
+            if (p.detail.isNotBlank()) addView(TextView(this@MainActivity).apply {
+                text = p.detail; textSize = 12f; setTextColor(muted)
+            })
+        })
+        if (!divider) return row
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(View(this@MainActivity).apply {
+                setBackgroundColor(MaterialColors.getColor(statusText, com.google.android.material.R.attr.colorOutlineVariant))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+            })
+            addView(row)
+        }
+    }
+
+    private fun goToPlace(p: Place) {
+        searchJob?.cancel()
+        searchInput.setText(p.name)
+        searchInput.clearFocus()
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(searchInput.windowToken, 0)
+        hideResults()
+        val zoom = when (p.kind) {
+            PlaceKind.LOCALITY -> 13.0
+            PlaceKind.NATURE -> 14.0
+            else -> 16.0
+        }
+        map.controller.animateTo(GeoPoint(p.lat, p.lon), zoom, 900L)
+        showPoint(LatLon(p.lat, p.lon), fromGps = false)
     }
 
     // ---------- Nova versão da app ----------
