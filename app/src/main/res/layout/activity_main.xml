@@ -90,7 +90,7 @@
             android:layout_marginTop="8dp"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:gravity="center_vertical"
+            android:baselineAligned="false"
             android:orientation="horizontal">
 
             <com.google.android.material.card.MaterialCardView
@@ -118,13 +118,25 @@
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
+            <!-- Mesma altura e estilo do cartão dos dados -->
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="52dp"
+                android:layout_height="match_parent"
+                android:clickable="true"
                 android:contentDescription="@string/info"
-                app:fabSize="mini"
-                app:srcCompat="@drawable/ic_info" />
+                android:focusable="true"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_info"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </LinearLayout>
 
