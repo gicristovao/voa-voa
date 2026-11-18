@@ -37,8 +37,11 @@ object Updater {
             try {
                 if (c.responseCode != 200) return@withContext null
                 val o = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
-                val tag = o.getString("tag_name")                       // ex.: v1.0.3
+                // Etiqueta: v<versão>.<build>, ex.: v1.1.0.16. O último número é o build (sobe sempre).
+                val tag = o.getString("tag_name")
                 val code = tag.substringAfterLast('.').toLongOrNull() ?: return@withContext null
+                val name = o.optString("name").removePrefix("Voa Voa").trim()
+                    .ifBlank { tag.removePrefix("v").substringBeforeLast('.') }
                 val assets = o.getJSONArray("assets")
                 var url: String? = null
                 for (i in 0 until assets.length()) {
@@ -46,7 +49,7 @@ object Updater {
                     if (a.optString("name").endsWith(".apk")) url = a.optString("browser_download_url")
                 }
                 if (url.isNullOrBlank()) return@withContext null
-                Release(code, tag.removePrefix("v"), url)
+                Release(code, name, url)
             } finally {
                 c.disconnect()
             }

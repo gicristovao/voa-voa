@@ -3,10 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Versão = MAIOR.MENOR (ficheiro VERSION, muda à mão com funcionalidades novas)
-//          + contador de builds do GitHub (sobe sempre, para a app instalar por cima da anterior).
+// Nome da versão = MAIOR.MENOR (ficheiro VERSION) + CORREÇÃO (calculada no GitHub; volta a 0 quando VERSION muda).
+// versionCode = contador de builds do GitHub: sobe sempre, para a app instalar por cima da anterior.
 val runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
 val baseVersion = rootProject.file("VERSION").readText().trim()
+val patch = System.getenv("VERSION_PATCH") ?: "0"
 
 android {
     namespace = "pt.gicristovao.voavoa"
@@ -17,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = runNumber
-        versionName = "$baseVersion.$runNumber"
+        versionName = "$baseVersion.$patch"
     }
 
     signingConfigs {

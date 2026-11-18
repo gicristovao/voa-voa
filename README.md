@@ -23,9 +23,10 @@ Na primeira vez, o Android pede autorização para instalar apps desta origem.
 
 ## Versões
 
-Formato `MAIOR.MENOR.N`:
-- `MAIOR.MENOR` está no ficheiro `VERSION`. Sobe o MENOR (1.1 → 1.2) com cada funcionalidade nova e o MAIOR com mudanças grandes.
-- `N` é o contador de builds do GitHub e sobe sempre, mesmo nas correções. É ele que a app usa para saber se há uma versão nova.
+Formato `MAIOR.MENOR.CORREÇÃO`, por exemplo 1.1.0, 1.1.1, 1.2.0.
+- `MAIOR.MENOR` está no ficheiro `VERSION`. Sobe o MENOR com cada funcionalidade nova e o MAIOR com mudanças grandes.
+- `CORREÇÃO` é calculada automaticamente: conta as alterações à app desde a última mudança de `VERSION` e volta a 0 quando `VERSION` muda.
+- Internamente, a app usa o contador de builds do GitHub (o último número da etiqueta, por exemplo `v1.1.0.16`) para saber se há uma versão nova.
 
 ## Aviso
 
