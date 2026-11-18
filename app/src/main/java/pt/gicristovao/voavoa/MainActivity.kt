@@ -2,6 +2,9 @@ package pt.gicristovao.voavoa
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.DashPathEffect
@@ -9,6 +12,7 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -46,6 +50,8 @@ class MainActivity : AppCompatActivity() {
     private var refreshing = false
     private var lastError: String? = null
     private var defaultTextColor = Color.DKGRAY
+    private var pendingInstall: File? = null
+    private var updateChecked = false
 
     private val askLocation = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -82,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             loadFromDisk()
             refresh(force = true)
+            checkForUpdate()
         }
     }
 
@@ -89,6 +96,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         map.onResume()
         if (hasLocationPermission()) locationOverlay.enableMyLocation()
+        // Voltou das definições depois de autorizar a instalação: continua.
+        pendingInstall?.let { apk ->
+            if (packageManager.canRequestPackageInstalls()) {
+                pendingInstall = null
+                launchInstaller(apk)
+            }
+        }
         // Se a atualização em segundo plano trouxe dados novos, recarrega.
         if (loadedAt >= 0 && ZoneRepository.status(this).downloadedAt != loadedAt) {
             lifecycleScope.launch { loadFromDisk() }
@@ -287,6 +301,75 @@ class MainActivity : AppCompatActivity() {
         map.invalidate()
 
         ZoneSheet.show(this, p, fromGps, active, upcoming, national)
+    }
+
+    // ---------- Nova versão da app ----------
+
+    private suspend fun checkForUpdate() {
+        if (updateChecked) return
+        updateChecked = true
+        val r = Updater.latest() ?: return
+        if (r.versionCode <= Updater.currentVersionCode(this)) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Nova versão da app")
+            .setMessage(
+                "Está disponível a versão ${r.versionName} (tens a ${Updater.currentVersionName(this)}).\n\n" +
+                    "Os teus dados e definições mantêm-se."
+            )
+            .setPositiveButton("Instalar") { _, _ -> downloadAndInstall(r) }
+            .setNegativeButton("Mais tarde", null)
+            .show()
+    }
+
+    private fun downloadAndInstall(r: Updater.Release) {
+        val progress: AlertDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("A descarregar")
+            .setMessage("Versão ${r.versionName}…")
+            .setCancelable(false)
+            .show()
+        lifecycleScope.launch {
+            val apk = runCatching { Updater.download(this@MainActivity, r.apkUrl) }.getOrNull()
+            progress.dismiss()
+            if (apk == null) {
+                MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle("Não foi possível descarregar")
+                    .setMessage("Podes instalar a versão nova a partir da página de versões no GitHub.")
+                    .setPositiveButton("Abrir página") { _, _ ->
+                        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Updater.RELEASES_PAGE))) }
+                    }
+                    .setNegativeButton("Fechar", null)
+                    .show()
+                return@launch
+            }
+            if (packageManager.canRequestPackageInstalls()) {
+                launchInstaller(apk)
+            } else {
+                pendingInstall = apk
+                MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle("Autorizar instalação")
+                    .setMessage(
+                        "Para a Voa Voa se atualizar sozinha, o Android pede que a autorizes uma vez a instalar apps. " +
+                            "Ativa a opção no ecrã seguinte e volta atrás."
+                    )
+                    .setPositiveButton("Continuar") { _, _ ->
+                        runCatching {
+                            startActivity(
+                                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+                            )
+                        }
+                    }
+                    .setNegativeButton("Cancelar") { _, _ -> pendingInstall = null }
+                    .show()
+            }
+        }
+    }
+
+    private fun launchInstaller(apk: File) {
+        try {
+            startActivity(Updater.installIntent(this, apk))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Não foi possível abrir o instalador", Toast.LENGTH_LONG).show()
+        }
     }
 
     // ---------- Informação ----------
