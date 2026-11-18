@@ -397,56 +397,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun showInfo() {
         val s = ZoneRepository.status(this)
-        val issued = s.issued?.let { runCatching { Texts.dateTime(Instant.parse(it)) }.getOrNull() } ?: "desconhecida"
-        val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "?"
-        val msg = buildString {
-            append("Cores no mapa\n")
-            append("• Vermelho: voo proibido\n")
-            append("• Amarelo: precisa de autorização ou tem condições\n")
-            append("• Cinzento: zona assinalada, sem restrição\n")
-            append("• Contorno tracejado: restrição temporária que ainda não começou\n\n")
-            append("Toca em qualquer ponto do mapa para ver as zonas desse local, ou usa \"Posso voar aqui?\" para a tua posição.\n\n")
-            append("Dados: zonas geográficas UAS da ANAC (formato ED-318), incluindo NOTAM.\n")
-            append("Versão dos dados: $issued (${s.source})\n")
-            append("A app atualiza sempre que é aberta e a cada 12 horas em segundo plano.\n\n")
-            append(DISCLAIMER)
-            val appState = when {
-                latestRelease == null -> ""
-                isNewer(latestRelease) -> " (há uma versão nova: ${latestRelease?.versionName})"
-                else -> " (a mais recente)"
-            }
-            append("\n\nVoa Voa $version$appState · Mapa © colaboradores do OpenStreetMap")
-        }
-        val newer = latestRelease?.takeIf { isNewer(it) }
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Voa Voa")
-            .setMessage(msg)
-            .setPositiveButton("Fechar", null)
-            .setNeutralButton("Atualizar dados") { _, _ -> refresh(force = true) }
-            .setNegativeButton(if (newer != null) "Instalar ${newer.versionName}" else "Procurar atualizações") { _, _ ->
-                if (newer != null) downloadAndInstall(newer) else searchForUpdate()
-            }
-            .show()
+        val issued = s.issued?.let { runCatching { Texts.dateTime(Instant.parse(it)) }.getOrNull() } ?: "data desconhecida"
+        val now = Instant.now()
+        val active = zones.count { it.isActive(now) && !it.isNationwide }
+        val sheet = InfoSheet(
+            act = this,
+            dataLine = "$issued · ${s.source}",
+            dataDetail = "$active zonas ativas · atualiza ao abrir e a cada 12 h",
+            versionName = Updater.currentVersionName(this),
+            onSearch = { sh -> searchForUpdate(sh) },
+            onInstall = { r -> downloadAndInstall(r) },
+        )
+        sheet.show(newer = latestRelease?.takeIf { isNewer(it) }, checked = latestRelease != null)
     }
 
-    private fun searchForUpdate() {
-        Toast.makeText(this, "A procurar atualizações…", Toast.LENGTH_SHORT).show()
+    private fun searchForUpdate(sheet: InfoSheet) {
         lifecycleScope.launch {
             val r = Updater.latest()
-            when {
-                r == null -> Toast.makeText(
-                    this@MainActivity, "Não foi possível verificar. Tenta mais tarde.", Toast.LENGTH_LONG
-                ).show()
-                isNewer(r) -> { latestRelease = r; showUpdatePrompt(r) }
-                else -> {
-                    latestRelease = r
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Já tens a versão mais recente (${Updater.currentVersionName(this@MainActivity)})",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+            if (r == null) { sheet.searchFailed(); return@launch }
+            latestRelease = r
+            sheet.setAppState(newer = r.takeIf { isNewer(it) }, checked = true)
         }
     }
 
