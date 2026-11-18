@@ -19,7 +19,10 @@ import java.util.Locale
 /** Painel inferior com o resultado de "posso voar aqui?" e o detalhe de cada zona. */
 object ZoneSheet {
 
-    fun show(act: Activity, p: LatLon, fromGps: Boolean, active: List<Zone>, upcoming: List<Zone>) {
+    fun show(
+        act: Activity, p: LatLon, fromGps: Boolean,
+        active: List<Zone>, upcoming: List<Zone>, national: List<Zone>,
+    ) {
         val d = act.resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
 
@@ -56,6 +59,11 @@ object ZoneSheet {
         if (upcoming.isNotEmpty()) {
             col.addView(text(act, "Restrições temporárias futuras (${upcoming.size})", 15f, bold = true, top = dp(18)))
             upcoming.forEach { col.addView(zoneCard(act, it, future = true), lp(top = dp(10))) }
+        }
+
+        if (national.isNotEmpty()) {
+            col.addView(text(act, "Aplica-se em todo o país", 15f, bold = true, top = dp(18)))
+            national.forEach { col.addView(zoneCard(act, it, future = false), lp(top = dp(10))) }
         }
 
         col.addView(text(act, MainActivity.DISCLAIMER, 12f, color = Color.GRAY, top = dp(18)))

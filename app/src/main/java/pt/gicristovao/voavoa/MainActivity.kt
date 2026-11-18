@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         zonesFolder.items.clear()
         val now = Instant.now()
         val density = resources.displayMetrics.density
-        for (z in zones.filter { !it.isExpired(now) }.sortedBy { it.type.rank }) {
+        for (z in zones.filter { !it.isExpired(now) && !it.isNationwide }.sortedBy { it.type.rank }) {
             val future = z.isFuture(now)
             val base = zoneColor(z)
             val rings: List<Pair<List<GeoPoint>, List<List<GeoPoint>>>> =
@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity() {
         val s = ZoneRepository.status(this)
         val issued = s.issued?.let { runCatching { Instant.parse(it) }.getOrNull() }
         val now = Instant.now()
-        val active = zones.count { it.isActive(now) }
+        val active = zones.count { it.isActive(now) && !it.isNationwide }
         val whenText = issued?.let { Texts.dateTime(it) } ?: "data desconhecida"
         val line1 = "Dados de $whenText · ${s.source}"
         val line2 = lastError ?: "$active zonas ativas · toca para atualizar"
@@ -271,7 +271,8 @@ class MainActivity : AppCompatActivity() {
     private fun showPoint(p: LatLon, fromGps: Boolean) {
         val now = Instant.now()
         val here = zones.filter { !it.isExpired(now) && it.contains(p) }
-        val active = here.filter { it.isActive(now) }.sortedByDescending { it.type.rank }
+        val national = here.filter { it.isNationwide && it.isActive(now) }
+        val active = here.filter { it.isActive(now) && !it.isNationwide }.sortedByDescending { it.type.rank }
         val upcoming = here.filter { it.isFuture(now) }
             .sortedBy { z -> z.periods.mapNotNull { it.start }.minOrNull() }
 
@@ -285,7 +286,7 @@ class MainActivity : AppCompatActivity() {
         marker.position = GeoPoint(p.lat, p.lon)
         map.invalidate()
 
-        ZoneSheet.show(this, p, fromGps, active, upcoming)
+        ZoneSheet.show(this, p, fromGps, active, upcoming, national)
     }
 
     // ---------- Informação ----------

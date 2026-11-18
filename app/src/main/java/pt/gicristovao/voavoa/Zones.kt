@@ -81,6 +81,10 @@ data class Zone(
         minLat = a; maxLat = b; minLon = c; maxLon = d
     }
 
+    /** Zona informativa que cobre o país inteiro (ex.: "Condições nacionais"). Não se pinta no mapa. */
+    val isNationwide: Boolean
+        get() = type == ZoneType.NO_RESTRICTION && maxLat - minLat > 3.0
+
     fun isActive(now: Instant): Boolean =
         periods.isEmpty() || periods.any {
             (it.start == null || !now.isBefore(it.start)) && (it.end == null || now.isBefore(it.end))
