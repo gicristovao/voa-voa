@@ -1,17 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- antenas -->
-    <path android:strokeColor="#212121" android:strokeWidth="2.5" android:strokeLineCap="round"
-        android:pathData="M50,31 L44,23 M58,31 L64,23"/>
-    <!-- cabeça -->
-    <path android:fillColor="#212121" android:pathData="M45,37a9,9 0 1,0 18,0a9,9 0 1,0 -18,0"/>
-    <!-- corpo -->
-    <path android:fillColor="#D32F2F" android:pathData="M32,59a22,22 0 1,0 44,0a22,22 0 1,0 -44,0"/>
-    <!-- risca das asas -->
-    <path android:fillColor="#212121" android:pathData="M52.8,38h2.4v43h-2.4z"/>
-    <!-- pintas -->
-    <path android:fillColor="#212121" android:pathData="M40,52a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"/>
-    <path android:fillColor="#212121" android:pathData="M59,52a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"/>
-    <path android:fillColor="#212121" android:pathData="M39,67a3.8,3.8 0 1,0 7.6,0a3.8,3.8 0 1,0 -7.6,0"/>
-    <path android:fillColor="#212121" android:pathData="M61.4,67a3.8,3.8 0 1,0 7.6,0a3.8,3.8 0 1,0 -7.6,0"/>
+    <!-- O Android só mostra os 72 dp centrais do ícone adaptativo: reduz-se o desenho para caber inteiro, como no mockup. -->
+    <group android:scaleX="0.6667" android:scaleY="0.6667" android:pivotX="54" android:pivotY="54">
+    <!-- Portugal continental -->
+    <path android:pathData="M40.5 13.7 L49.4 8.9 L53.3 13.8 L62.6 13.5 L70.5 12.3 L75.8 18.7 L66.5 28.6 L67.9 35.5 L65.9 41.5 L65.2 51.5 L58.2 51.7 L61.9 59.6 L65.2 64.8 L63.9 76.8 L61.3 80.2 L59.3 88.8 L59.9 94.3 L53.3 97.4 L44.1 95.7 L39.0 97.1 L41.5 82.0 L41.5 73.4 L36.2 73.4 L38.8 69.1 L32.2 67.3 L33.5 56.2 L38.8 47.6 L40.8 37.2 L43.4 28.6 L41.5 20.0 Z" android:fillColor="#43A047" android:strokeColor="#2E7D32" android:strokeWidth="1.5" android:strokeLineJoin="round"/>
+    <!-- zonas -->
+    <path android:pathData="M10,40 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0" android:fillColor="#E53935" android:fillAlpha="0.55" android:strokeColor="#EF5350" android:strokeWidth="2"/>
+    <path android:pathData="M42,66 a28,28 0 1,0 56,0 a28,28 0 1,0 -56,0" android:fillColor="#FBC02D" android:fillAlpha="0.5" android:strokeColor="#FDD835" android:strokeWidth="2"/>
+    <path android:pathData="M91.00,28.00 A11,11 0 0,1 90.30,31.87 M88.90,34.47 A11,11 0 0,1 86.06,37.18 M83.40,38.46 A11,11 0 0,1 79.51,38.99 M76.60,38.46 A11,11 0 0,1 73.14,36.60 M71.10,34.47 A11,11 0 0,1 69.40,30.93 M69.00,28.00 A11,11 0 0,1 69.70,24.13 M71.10,21.53 A11,11 0 0,1 73.94,18.82 M76.60,17.54 A11,11 0 0,1 80.49,17.01 M83.40,17.54 A11,11 0 0,1 86.86,19.40 M88.90,21.53 A11,11 0 0,1 90.60,25.07" android:strokeColor="#78909C" android:strokeWidth="2" android:strokeLineCap="round"/>
+    <!-- drone: protecções das hélices -->
+    <path android:pathData="M23,36 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M59,36 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M23,74 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M59,74 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" android:strokeColor="#263238" android:strokeWidth="5"/>
+    <path android:pathData="M23,36 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M59,36 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M23,74 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0 M59,74 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" android:strokeColor="#FFFFFF" android:strokeWidth="2.5"/>
+    <path android:pathData="M50,48 L40,40 M58,48 L68,40 M50,62 L40,70 M58,62 L68,70" android:strokeColor="#263238" android:strokeWidth="7" android:strokeLineCap="round"/>
+    <path android:pathData="M50,48 L40,40 M58,48 L68,40 M50,62 L40,70 M58,62 L68,70" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round"/>
+    <!-- hélices -->
+    <group android:rotation="35" android:pivotX="36" android:pivotY="36">
+        <path android:pathData="M26,36 a10,2 0 1,0 20,0 a10,2 0 1,0 -20,0" android:fillColor="#263238"/>
+    </group>
+    <group android:rotation="-35" android:pivotX="72" android:pivotY="36">
+        <path android:pathData="M62,36 a10,2 0 1,0 20,0 a10,2 0 1,0 -20,0" android:fillColor="#263238"/>
+    </group>
+    <group android:rotation="-35" android:pivotX="36" android:pivotY="74">
+        <path android:pathData="M26,74 a10,2 0 1,0 20,0 a10,2 0 1,0 -20,0" android:fillColor="#263238"/>
+    </group>
+    <group android:rotation="35" android:pivotX="72" android:pivotY="74">
+        <path android:pathData="M62,74 a10,2 0 1,0 20,0 a10,2 0 1,0 -20,0" android:fillColor="#263238"/>
+    </group>
+    <!-- corpo e câmara -->
+    <path android:pathData="M53,42 h2 a8,8 0 0,1 8,8 v11 a8,8 0 0,1 -8,8 h-2 a8,8 0 0,1 -8,-8 v-11 a8,8 0 0,1 8,-8 z" android:fillColor="#FFFFFF" android:strokeColor="#263238" android:strokeWidth="2.5"/>
+    <path android:pathData="M49.5,44 a4.5,4.5 0 1,0 9.0,0 a4.5,4.5 0 1,0 -9.0,0" android:fillColor="#263238"/>
+    <path android:pathData="M52.2,44 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" android:fillColor="#64B5F6"/>
+    </group>
 </vector>
