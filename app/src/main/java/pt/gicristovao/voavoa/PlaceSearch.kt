@@ -10,9 +10,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.Normalizer
 import java.util.Locale
 
-enum class PlaceKind { LOCALITY, LANDMARK, NATURE, ADDRESS, OTHER }
+enum class PlaceKind { LOCALITY, LANDMARK, NATURE, TRANSPORT, ADDRESS, OTHER }
 
 data class Place(val name: String, val detail: String, val lat: Double, val lon: Double, val kind: PlaceKind)
 
@@ -43,7 +44,6 @@ object PlaceSearch {
             try {
                 if (c.responseCode != 200) return@withContext emptyList<Place>()
                 val feats = JSONObject(c.inputStream.bufferedReader().use { it.readText() }).getJSONArray("features")
-                val seen = HashSet<String>()
                 (0 until feats.length()).mapNotNull { i ->
                     val f = feats.getJSONObject(i)
                     val p = f.getJSONObject("properties")
@@ -57,10 +57,8 @@ object PlaceSearch {
                         ?: return@mapNotNull null
                     val detail = listOfNotNull(p.str("district"), p.str("locality"), p.str("city"), p.str("county"), p.str("state"))
                         .filter { !it.equals(name, true) }.distinct().take(2).joinToString(", ")
-                    val key = "${name.lowercase()}|${"%.3f".format(Locale.US, lat)}|${"%.3f".format(Locale.US, lon)}"
-                    if (!seen.add(key)) return@mapNotNull null
                     Place(name, detail, lat, lon, photonKind(p.optString("osm_key"), p.optString("osm_value"), p.optString("type")))
-                }.take(8)
+                }.mergeDuplicates().take(8)
             } finally {
                 c.disconnect()
             }
@@ -69,7 +67,13 @@ object PlaceSearch {
 
     private fun JSONObject.str(k: String): String? = optString(k, "").trim().ifBlank { null }
 
+    private val transportValues = setOf(
+        "station", "halt", "stop", "tram_stop", "subway_entrance", "bus_stop", "bus_station",
+        "platform", "stop_position", "ferry_terminal",
+    )
+
     private fun photonKind(key: String, value: String, type: String): PlaceKind = when {
+        key == "railway" || key == "public_transport" || value in transportValues -> PlaceKind.TRANSPORT
         key == "place" || type in setOf("city", "locality", "district", "county") -> PlaceKind.LOCALITY
         key in setOf("leisure", "natural", "landuse", "waterway") || value in setOf("park", "beach", "peak", "nature_reserve") ->
             PlaceKind.NATURE
@@ -86,7 +90,7 @@ object PlaceSearch {
                 .orEmpty()
                 .filter { it.countryCode.isNullOrBlank() || it.countryCode.equals("PT", true) }
                 .mapNotNull { fromAddress(it, query) }
-        }.getOrDefault(emptyList()).sortedByNear(near)
+        }.getOrDefault(emptyList()).mergeDuplicates().sortedByNear(near)
     }
 
     private fun fromAddress(a: Address, query: String): Place? {
@@ -135,7 +139,7 @@ object PlaceSearch {
                         o.optString("lon").toDoubleOrNull() ?: return@mapNotNull null,
                         kindOf(o.optString("category"), o.optString("type"), o.optString("addresstype")),
                     )
-                }
+                }.mergeDuplicates()
             } finally {
                 c.disconnect()
             }
@@ -143,6 +147,7 @@ object PlaceSearch {
     }
 
     private fun kindOf(category: String, type: String, addressType: String): PlaceKind = when {
+        category == "railway" || category == "public_transport" || type in transportValues -> PlaceKind.TRANSPORT
         category == "place" || addressType in setOf("city", "town", "village", "hamlet", "suburb", "neighbourhood", "quarter", "municipality") ->
             PlaceKind.LOCALITY
         category in setOf("leisure", "natural", "landuse", "waterway") || type in setOf("park", "beach", "peak", "nature_reserve") ->
@@ -152,6 +157,29 @@ object PlaceSearch {
         else -> PlaceKind.OTHER
     }
 
+    private fun norm(s: String) =
+        Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase(pt).trim()
+
+    /**
+     * O OpenStreetMap regista muitas vezes o mesmo sítio várias vezes (edifício, terreno, sala…).
+     * Resultados com o mesmo nome a menos de 300 m passam a um só; fica o primeiro (mais relevante),
+     * com o tipo mais informativo entre os repetidos.
+     */
+    private fun List<Place>.mergeDuplicates(): List<Place> {
+        val out = ArrayList<Place>()
+        for (p in this) {
+            val i = out.indexOfFirst {
+                norm(it.name) == norm(p.name) && Zone.distanceMeters(LatLon(it.lat, it.lon), LatLon(p.lat, p.lon)) < 300
+            }
+            if (i < 0) { out.add(p); continue }
+            val kept = out[i]
+            if (kept.kind in setOf(PlaceKind.OTHER, PlaceKind.ADDRESS) && p.kind !in setOf(PlaceKind.OTHER, PlaceKind.ADDRESS)) {
+                out[i] = kept.copy(kind = p.kind)
+            }
+        }
+        return out
+    }
+
     private fun List<Place>.sortedByNear(near: LatLon) =
         sortedBy { Zone.distanceMeters(near, LatLon(it.lat, it.lon)) }
 
@@ -159,6 +187,7 @@ object PlaceSearch {
         PlaceKind.LOCALITY -> R.drawable.ic_city
         PlaceKind.LANDMARK -> R.drawable.ic_landmark
         PlaceKind.NATURE -> R.drawable.ic_park
+        PlaceKind.TRANSPORT -> R.drawable.ic_transit
         PlaceKind.ADDRESS -> R.drawable.ic_home
         PlaceKind.OTHER -> R.drawable.ic_place
     }
