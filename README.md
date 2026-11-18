@@ -21,6 +21,12 @@ Na primeira vez, o Android pede autorização para instalar apps desta origem.
 - **Cópia de segurança:** a tarefa automática `Atualizar dados ANAC` (separador *Actions*) descarrega os dados duas vezes por dia para `data/zones.json`. A app usa esta cópia quando a ANAC não responde.
 - **Nova versão da app:** cada alteração ao código gera uma nova versão em *Releases*.
 
+## Versões
+
+Formato `MAIOR.MENOR.N`:
+- `MAIOR.MENOR` está no ficheiro `VERSION`. Sobe o MENOR (1.1 → 1.2) com cada funcionalidade nova e o MAIOR com mudanças grandes.
+- `N` é o contador de builds do GitHub e sobe sempre, mesmo nas correções. É ele que a app usa para saber se há uma versão nova.
+
 ## Aviso
 
 Não é uma app oficial. Confirma sempre as restrições em [dnt.anac.pt](https://dnt.anac.pt/) antes de voar.

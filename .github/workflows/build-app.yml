@@ -9,6 +9,7 @@ on:
       - "gradle/**"
       - "gradle.properties"
       - ".github/workflows/build-app.yml"
+      - "VERSION"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +28,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Ler a versão
+        run: echo "BASE_VERSION=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_ENV"
+
       - name: Incluir os dados mais recentes na app
         run: |
           mkdir -p app/src/main/assets
@@ -41,8 +45,8 @@ jobs:
       - name: Publicar
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Voa Voa 1.0.${{ github.run_number }}
+          tag_name: v${{ env.BASE_VERSION }}.${{ github.run_number }}
+          name: Voa Voa ${{ env.BASE_VERSION }}.${{ github.run_number }}
           body: |
             Para instalar no Android: abre esta página no telemóvel e toca em **voa-voa.apk**.
           files: voa-voa.apk
