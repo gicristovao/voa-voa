@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "voa-voa"
 include(":app")
+include(":wear")

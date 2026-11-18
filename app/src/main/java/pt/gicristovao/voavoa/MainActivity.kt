@@ -425,7 +425,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { goToPlace(p) }
         }
         row.addView(ImageView(this).apply {
-            setImageResource(PlaceSearch.icon(p.kind))
+            setImageResource(PlaceIcons.icon(p.kind))
             setColorFilter(muted)
             layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(14) }
         })

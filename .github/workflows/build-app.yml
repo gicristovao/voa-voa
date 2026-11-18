@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "wear/**"
+      - "shared/**"
       - "*.gradle.kts"
       - "gradle/**"
       - "gradle.properties"
@@ -35,21 +37,23 @@ jobs:
           BASE=$(cat VERSION | tr -d '[:space:]')
           LAST=$(git log -1 --format=%H -- VERSION)
           # Correções = alterações à app desde a última mudança de VERSION
-          PATCH=$(git rev-list --count "$LAST"..HEAD -- app '*.gradle.kts' gradle gradle.properties .github/workflows/build-app.yml)
+          PATCH=$(git rev-list --count "$LAST"..HEAD -- app wear shared '*.gradle.kts' gradle gradle.properties .github/workflows/build-app.yml)
           echo "VERSION_PATCH=$PATCH" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$BASE.$PATCH" >> "$GITHUB_ENV"
           echo "Versão: $BASE.$PATCH (build ${{ github.run_number }})"
 
       - name: Incluir os dados mais recentes na app
         run: |
-          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/assets wear/src/main/assets
           cp data/zones.json app/src/main/assets/zones.json
+          cp data/zones.json wear/src/main/assets/zones.json
 
       - name: Compilar
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+          ./gradlew :app:assembleRelease :wear:assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
           cp app/build/outputs/apk/release/app-release.apk voa-voa.apk
+          cp wear/build/outputs/apk/release/wear-release.apk voa-voa-wear.apk
 
       - name: Publicar
         uses: softprops/action-gh-release@v2
@@ -57,8 +61,11 @@ jobs:
           tag_name: v${{ env.VERSION_NAME }}.${{ github.run_number }}
           name: Voa Voa ${{ env.VERSION_NAME }}
           body: |
-            Para instalar no Android: abre esta página no telemóvel e toca em **voa-voa.apk**.
-          files: voa-voa.apk
+            **Telemóvel:** abre esta página no telemóvel e toca em **voa-voa.apk**.
+            **Relógio (Wear OS):** instala o **voa-voa-wear.apk** no relógio (ver README).
+          files: |
+            voa-voa-wear.apk
+            voa-voa.apk
           make_latest: true
 
       - name: Guardar registo do erro

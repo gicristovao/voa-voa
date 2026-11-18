@@ -56,16 +56,18 @@ object ZoneRepository {
     }
 
     /** Vai buscar dados novos. Devolve a fonte usada, ou erro se nenhuma funcionou. */
-    suspend fun refresh(ctx: Context): Result<String> = withContext(Dispatchers.IO) {
+    /** preferMirror: o relógio vai primeiro à cópia no GitHub (ficheiro mais leve). */
+    suspend fun refresh(ctx: Context, preferMirror: Boolean = false): Result<String> = withContext(Dispatchers.IO) {
         var lastError: Throwable? = null
         val current = status(ctx)
-        for ((source, url) in listOf(SOURCE_ANAC to ANAC_URL, SOURCE_MIRROR to MIRROR_URL)) {
+        val order = listOf(SOURCE_ANAC to ANAC_URL, SOURCE_MIRROR to MIRROR_URL)
+        for ((source, url) in if (preferMirror) order.reversed() else order) {
             try {
                 val text = download(url)
                 val parsed = ZoneParser.parse(text)
                 if (parsed.zones.size < MIN_ZONES) throw IOException("Ficheiro com poucas zonas (${parsed.zones.size})")
                 // Não substituir dados mais recentes por uma cópia mais antiga.
-                if (source == SOURCE_MIRROR && current.issued != null && parsed.issued != null &&
+                if (source == SOURCE_MIRROR && !preferMirror && current.issued != null && parsed.issued != null &&
                     parsed.issued < current.issued && cache(ctx).exists()
                 ) return@withContext Result.success(current.source)
                 save(ctx, text, parsed.issued, source)
