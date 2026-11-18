@@ -6,7 +6,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -14,6 +16,8 @@ import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
+import java.time.Instant
 import java.util.Locale
 
 /** Painel inferior com o resultado de "posso voar aqui?" e o detalhe de cada zona. */
@@ -99,12 +103,25 @@ object ZoneSheet {
             inner.addView(text(act, value, 14f))
         }
 
-        field("Condições", z.message)
-        field("Altitude da zona", Texts.altitude(z))
-        val motivo = (z.reasons.map { Texts.reason(it) } + listOfNotNull(z.otherReason)).distinct().joinToString(" · ")
-        field("Motivo", motivo)
-        field(if (future) "Quando" else "Validade", Texts.validity(z))
-        field("Horário", z.periods.firstOrNull()?.schedule)
+        if (z.notam != null) {
+            inner.addView(text(act, "  Temporária · NOTAM  ", 12f, bold = true, color = Color.parseColor("#5D4200")).apply {
+                setBackgroundColor(Color.parseColor("#FFE08A"))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(4) }
+            })
+            inner.addView(notamSummary(act, z), LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10) })
+            inner.addView(notamOriginal(act, z.notam))
+        } else {
+            field("Condições", z.message)
+            field("Altitude da zona", Texts.altitude(z))
+            val motivo = (z.reasons.map { Texts.reason(it) } + listOfNotNull(z.otherReason)).distinct().joinToString(" · ")
+            field("Motivo", motivo)
+            field(if (future) "Quando" else "Validade", Texts.validity(z))
+            field("Horário", z.periods.firstOrNull()?.schedule)
+        }
 
         for (a in z.authorities) {
             val isAuth = a.purpose.equals("AUTHORIZATION", true)
@@ -132,10 +149,6 @@ object ZoneSheet {
             if (row.childCount > 0) inner.addView(row)
         }
 
-        z.notam?.let {
-            inner.addView(text(act, "NOTAM", 12f, color = Color.GRAY, top = dp(10)))
-            inner.addView(text(act, it.replace("\r", ""), 12f).apply { typeface = Typeface.MONOSPACE })
-        }
         inner.addView(text(act, "Identificador: ${z.id}", 11f, color = Color.GRAY, top = dp(10)))
 
         return MaterialCardView(act).apply {
@@ -145,6 +158,77 @@ object ZoneSheet {
             cardElevation = 0f
             addView(inner)
         }
+    }
+
+    /** Caixa com o resumo do NOTAM em português. */
+    private fun notamSummary(act: Activity, z: Zone): View {
+        val d = act.resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
+        val n = Notam.parse(z.notam ?: "")
+        val start = n.start ?: z.periods.firstOrNull()?.start
+        val end = n.end ?: z.periods.firstOrNull()?.end
+        val muted = MaterialColors.getColor(act, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY)
+
+        val box = LinearLayout(act).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(MaterialColors.getColor(act, com.google.android.material.R.attr.colorSurfaceContainerHigh, Color.parseColor("#EEEEEE")))
+            }
+        }
+        box.addView(text(act, "Resumo do NOTAM", 12f, color = muted))
+
+        fun row(icon: Int, label: String, value: String?, sub: String? = null, tint: Int = muted) {
+            if (value.isNullOrBlank()) return
+            val r = LinearLayout(act).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, dp(8), 0, 0)
+            }
+            r.addView(ImageView(act).apply {
+                setImageResource(icon)
+                setColorFilter(tint)
+                layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginEnd = dp(10); topMargin = dp(1) }
+            })
+            val col = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
+            col.addView(text(act, "$label: $value", 14f))
+            sub?.let { col.addView(text(act, it, 12f, color = muted)) }
+            r.addView(col)
+            box.addView(r)
+        }
+
+        row(R.drawable.ic_block, "O quê", n.what, tint = Color.parseColor("#C62828"))
+        row(R.drawable.ic_place, "Onde", n.where)
+        row(R.drawable.ic_event, "Quando", Notam.period(start, end), Notam.relative(Instant.now(), start, end))
+        row(R.drawable.ic_schedule, "Horário", n.schedule)
+        row(R.drawable.ic_height, "Altitude", n.altitude ?: Texts.altitude(z))
+        row(R.drawable.ic_shield, "Exceções", n.exceptions)
+        return box
+    }
+
+    /** Texto original do NOTAM, recolhido por omissão. */
+    private fun notamOriginal(act: Activity, raw: String): View {
+        val d = act.resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
+        val wrap = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, 0) }
+        val body = text(act, raw.replace("\r", "").trim(), 11f).apply {
+            typeface = Typeface.MONOSPACE
+            visibility = View.GONE
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+        }
+        val toggle = MaterialButton(act, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Texto original do NOTAM"
+            setIconResource(R.drawable.ic_expand_more)
+            iconGravity = MaterialButton.ICON_GRAVITY_END
+            setOnClickListener {
+                val open = body.visibility == View.VISIBLE
+                body.visibility = if (open) View.GONE else View.VISIBLE
+                setIconResource(if (open) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
+            }
+        }
+        wrap.addView(toggle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        wrap.addView(body)
+        return wrap
     }
 
     private fun verdictColors(t: ZoneType?): Pair<Int, Int> = when (t) {
