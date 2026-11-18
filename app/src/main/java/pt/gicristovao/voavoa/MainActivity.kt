@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingInstall: File? = null
     private var updateChecked = false
     private var latestRelease: Updater.Release? = null
+    private var infoSheet: InfoSheet? = null
 
     private val askLocation = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -396,18 +397,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showInfo() {
+        infoSheet?.let { if (it.isOpen) { it.close(); return } }
         val s = ZoneRepository.status(this)
         val issued = s.issued?.let { runCatching { Texts.dateTime(Instant.parse(it)) }.getOrNull() } ?: "data desconhecida"
         val now = Instant.now()
         val active = zones.count { it.isActive(now) && !it.isNationwide }
         val sheet = InfoSheet(
             act = this,
+            anchor = findViewById(R.id.btnInfo),
             dataLine = "$issued · ${s.source}",
             dataDetail = "$active zonas ativas · atualiza ao abrir e a cada 12 h",
             versionName = Updater.currentVersionName(this),
             onSearch = { sh -> searchForUpdate(sh) },
             onInstall = { r -> downloadAndInstall(r) },
         )
+        infoSheet = sheet
         sheet.show(newer = latestRelease?.takeIf { isNewer(it) }, checked = latestRelease != null)
     }
 
