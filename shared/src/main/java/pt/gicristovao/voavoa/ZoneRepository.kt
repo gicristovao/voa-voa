@@ -14,6 +14,7 @@ import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 /**
@@ -56,10 +57,21 @@ object ZoneRepository {
     }
 
     /** Vai buscar dados novos. Devolve a fonte usada, ou erro se nenhuma funcionou. */
-    /** preferMirror: o relógio vai primeiro à cópia no GitHub (ficheiro mais leve). */
-    suspend fun refresh(ctx: Context, preferMirror: Boolean = false): Result<String> = withContext(Dispatchers.IO) {
+    /**
+     * Vai buscar dados novos. Devolve true se as zonas mudaram (é preciso redesenhar), false se ficaram iguais.
+     * preferMirror: o relógio vai primeiro à cópia no GitHub (ficheiro mais leve).
+     * skipIfNewerThanMs: não descarrega se a última descarga for mais recente do que isto (poupa dados).
+     */
+    suspend fun refresh(
+        ctx: Context,
+        preferMirror: Boolean = false,
+        skipIfNewerThanMs: Long = 0,
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
         var lastError: Throwable? = null
         val current = status(ctx)
+        if (skipIfNewerThanMs > 0 && cache(ctx).exists() &&
+            System.currentTimeMillis() - current.downloadedAt < skipIfNewerThanMs
+        ) return@withContext Result.success(false)
         val order = listOf(SOURCE_ANAC to ANAC_URL, SOURCE_MIRROR to MIRROR_URL)
         for ((source, url) in if (preferMirror) order.reversed() else order) {
             try {
@@ -69,9 +81,8 @@ object ZoneRepository {
                 // Não substituir dados mais recentes por uma cópia mais antiga.
                 if (source == SOURCE_MIRROR && !preferMirror && current.issued != null && parsed.issued != null &&
                     parsed.issued < current.issued && cache(ctx).exists()
-                ) return@withContext Result.success(current.source)
-                save(ctx, text, parsed.issued, source)
-                return@withContext Result.success(source)
+                ) return@withContext Result.success(false)
+                return@withContext Result.success(save(ctx, text, parsed.issued, source))
             } catch (e: Throwable) {
                 lastError = e
             }
@@ -92,7 +103,25 @@ object ZoneRepository {
         }
     }
 
-    private fun save(ctx: Context, text: String, issued: String?, source: String) {
+    /** Impressão digital das zonas (ignora o cabeçalho, que muda a cada descarga). */
+    private fun featuresHash(text: String): String {
+        val i = text.indexOf("\"features\"")
+        val body = if (i >= 0) text.substring(i) else text
+        return MessageDigest.getInstance("SHA-256").digest(body.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
+    /** Guarda os dados. Se as zonas forem iguais às guardadas, só atualiza a data da verificação. Devolve se mudaram. */
+    private fun save(ctx: Context, text: String, issued: String?, source: String): Boolean {
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val hash = featuresHash(text)
+        if (cache(ctx).exists() && hash == prefs.getString("featuresHash", null)) {
+            prefs.edit()
+                .putString("issued", issued)
+                .putString("source", source)
+                .putLong("downloadedAt", System.currentTimeMillis())
+                .apply()
+            return false
+        }
         val tmp = File(ctx.filesDir, "zones.json.tmp")
         tmp.writeText(text)
         if (!tmp.renameTo(cache(ctx))) {
@@ -103,7 +132,9 @@ object ZoneRepository {
             .putString("issued", issued)
             .putString("source", source)
             .putLong("downloadedAt", System.currentTimeMillis())
+            .putString("featuresHash", hash)
             .apply()
+        return true
     }
 
     /** Atualização em segundo plano, a cada 12 horas, quando houver rede. */

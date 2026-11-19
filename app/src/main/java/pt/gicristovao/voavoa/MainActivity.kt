@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             loadFromDisk()
-            refresh(force = true)
+            refresh(force = false)
             checkForUpdate()
         }
     }
@@ -225,15 +225,23 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
     }
 
+    /**
+     * force = true: descarrega sempre (toque no cartão, botão de atualizar).
+     * force = false: ao abrir a app, só descarrega se a última descarga tiver mais de 1 hora.
+     */
     private fun refresh(force: Boolean) {
-        if (refreshing || !force) return
+        if (refreshing) return
         refreshing = true
-        statusText.text = "A atualizar zonas…"
+        if (force) statusText.text = "A atualizar zonas…"
         lifecycleScope.launch {
-            val r = ZoneRepository.refresh(this@MainActivity)
+            val r = ZoneRepository.refresh(
+                this@MainActivity,
+                skipIfNewerThanMs = if (force) 0 else 60 * 60 * 1000L,
+            )
             refreshing = false
             lastError = r.exceptionOrNull()?.let { "Sem ligação: a mostrar os dados guardados" }
-            if (r.isSuccess) loadFromDisk() else updateStatus()
+            if (r.getOrDefault(false)) loadFromDisk()
+            else { loadedAt = ZoneRepository.status(this@MainActivity).downloadedAt; updateStatus() }
         }
     }
 
