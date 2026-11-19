@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var resultsList: LinearLayout
     private lateinit var statusCard: View
     private var searchJob: Job? = null
+    private var suppressSearch = false
 
     private val askLocation = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -152,6 +153,7 @@ class MainActivity : AppCompatActivity() {
 
         val events = MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                closeSearchList()
                 showPoint(LatLon(p.latitude, p.longitude), fromGps = false); return true
             }
             override fun longPressHelper(p: GeoPoint): Boolean = false
@@ -342,6 +344,8 @@ class MainActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val q = s?.toString()?.trim().orEmpty()
                 clear.visibility = if (q.isEmpty()) View.GONE else View.VISIBLE
+                // Texto posto pela própria app (ao escolher um resultado): não voltar a pesquisar.
+                if (suppressSearch) return
                 searchJob?.cancel()
                 if (q.length < 2) { hideResults(); return }
                 if (!searchInput.hasFocus()) return
@@ -447,10 +451,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun closeSearchList() {
+        if (!::searchInput.isInitialized) return
+        searchJob?.cancel()
+        searchInput.clearFocus()
+        (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(searchInput.windowToken, 0)
+        hideResults()
+    }
+
     private fun goToPlace(p: Place) {
         searchJob?.cancel()
-        searchInput.setText(p.name)
         searchInput.clearFocus()
+        suppressSearch = true
+        searchInput.setText(p.name)
+        suppressSearch = false
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(searchInput.windowToken, 0)
         hideResults()
