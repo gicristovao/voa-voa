@@ -2,6 +2,7 @@ package pt.gicristovao.voavoa.wear
 
 import android.graphics.Color as AColor
 import androidx.compose.ui.graphics.Color
+import pt.gicristovao.voavoa.MILITARY_COLOR
 import pt.gicristovao.voavoa.Zone
 import pt.gicristovao.voavoa.ZoneType
 
@@ -38,6 +39,7 @@ object WearUi {
 
     /** Cor da zona no mapa (cor da ANAC, ou pelo tipo). */
     fun zoneColor(z: Zone): Int {
+        if (z.isMilitary && z.type != ZoneType.PROHIBITED) return MILITARY_COLOR
         z.colorHex?.let { hex -> runCatching { return AColor.parseColor("#$hex") } }
         return when (z.type) {
             ZoneType.PROHIBITED -> AColor.RED

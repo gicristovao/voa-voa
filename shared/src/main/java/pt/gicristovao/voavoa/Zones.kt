@@ -85,6 +85,10 @@ data class Zone(
     val isNationwide: Boolean
         get() = type == ZoneType.NO_RESTRICTION && maxLat - minLat > 3.0
 
+    /** Zona militar, segundo a ANAC ("Military Area" nas razões). */
+    val isMilitary: Boolean
+        get() = otherReason?.contains("Military", ignoreCase = true) == true
+
     fun isActive(now: Instant): Boolean =
         periods.isEmpty() || periods.any {
             (it.start == null || !now.isBefore(it.start)) && (it.end == null || now.isBefore(it.end))
@@ -254,3 +258,6 @@ fun JSONObject.optStringOrNull(key: String): String? =
 
 fun JSONArray?.strings(): List<String> =
     if (this == null) emptyList() else (0 until length()).mapNotNull { optString(it).ifBlank { null } }
+
+/** Cor das zonas militares que não são proibidas (as proibidas ficam a vermelho). */
+const val MILITARY_COLOR: Int = 0xFFFF7A00.toInt()

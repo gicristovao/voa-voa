@@ -99,7 +99,8 @@ class InfoSheet(
         // Legenda
         col.addView(text("Cores no mapa", 13f, bold = true), lp(bottom = dp(6)))
         legend(col, "#E24B4A", false, "Voo proibido")
-        legend(col, "#EF9F27", false, "Precisa de autorização ou tem condições")
+        legend(col, "#FF7A00", false, "Zona militar")
+        legend(col, "#FFD600", false, "Precisa de autorização ou tem condições")
         legend(col, "#888780", false, "Zona assinalada, sem restrição")
         legend(col, "#E24B4A", true, "Restrição temporária que ainda não começou")
 

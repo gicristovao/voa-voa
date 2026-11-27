@@ -204,6 +204,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun zoneColor(z: Zone): Int {
+        if (z.isMilitary && z.type != ZoneType.PROHIBITED) return MILITARY_COLOR
         val hex = z.colorHex
         if (hex != null) runCatching { return Color.parseColor("#$hex") }
         return when (z.type) {
